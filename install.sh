@@ -1,7 +1,7 @@
 #!/bin/bash
 
-export ovpnDataPath=/opt/openvpn/cfg
-export containerName="openVPN"
+export ovpn_data_path=/home/ubuntu/data/ovpn.conf
+export container_name="openvpn"
 
 userInterface(){
     read  -p "Select your desired protocol:[udp/tcp] " PROTOCOL
@@ -25,7 +25,7 @@ userInterface(){
     read -p "Enter your public IP address: " IPaddr
     export IPaddr
     
-    read -p "Do you want to enable ovpn file password?[yes/no] " iywpass
+    read -p "Do you want to enable ovpn file passpharse?[yes/no] " iywpass
     case "$iywpass" in
         yes)
             export iywpass=""
@@ -52,12 +52,14 @@ summery(){
     totalwidth=55
 
     echo -e "\nSUMMERY:"
-    printf "$header" "IP addrres" Port Protocol Password
+    printf "$header" "IP addrres" Port Protocol Passpharse
     printf "%$totalwidth.${totalwidth}s\n" "$divider"
     printf "$format" \
         $IPaddr $PORT $PROTOCOL $passwordState
 
     read -p "Are you confident in your information?[yes/no] " confident
+
+    echo $ovpn_data_path
     if [[ $confident == "No" ]]; then echo "Please run script again."; exit 1; fi
 }
 
@@ -66,7 +68,7 @@ preConfiguration(){
     echo -e "\nInstalling Docker..."
     if [[ -f /etc/debian_version ]]; then
         echo "APT is here!"
-        sudo apt install -y docker docker.io
+        sudo apt install -y docker docker.io docker-compose
     else
         echo "YUM is here!"
         sudo yum install -y yum-utils
@@ -80,34 +82,41 @@ preConfiguration(){
 }
 
 configuration(){
-    sudo rm -rf $ovpnDataPath
-    sudo mkdir -p $ovpnDataPath
+    sudo rm -rf $ovpn_data_path
+    sudo mkdir -p $ovpn_data_path
+    cd $ovpn_data_path
+    cat <<EOF > $ovpn_data_path/docker-compose.yml
+version: '2'
+services:
+  openvpn:
+    cap_add:
+     - NET_ADMIN
+    image: kylemanna/openvpn
+    container_name: $container_name
+    ports:
+     - "${PORT}:1194/${PROTOCOL}"
+    restart: always
+    volumes:
+     - ${ovpn_data_path}:/etc/openvpn
+EOF
 
-    sudo docker run -v $ovpnDataPath:/etc/openvpn --log-driver=none --rm \
-        kylemanna/openvpn ovpn_genconfig -u ${PROTOCOL}://${IPaddr}:$PORT
+    docker-compose run --rm openvpn ovpn_genconfig -u ${PROTOCOL}://$IPaddr
+    docker-compose run --rm openvpn ovpn_initpki
 
-    ## Generating and retrieving CA certificate and client certificates
-    sudo docker run -v $ovpnDataPath:/etc/openvpn --log-driver=none --rm \
-        -it kylemanna/openvpn ovpn_initpki
+    docker-compose up -d openvpn
 
-    ## Start the OpenVPN server service
-    sudo docker run -v $ovpnDataPath:/etc/openvpn -d --name $containerName -p ${PORT}:1194/${PROTOCOL} \
-        --cap-add=NET_ADMIN kylemanna/openvpn
+
 
     ## Enabling multi-client
-    sudo echo "duplicate-cn" >> $ovpnDataPath/openvpn.conf
-    sudo docker restart $containerName
+    sudo echo "duplicate-cn" >> $ovpn_data_path/openvpn.conf
+    sudo docker restart $container_name
 
-    echo -e "\nWhat is your desired name of .ovpn file name?"
-    read ovpnFileName
-    export ovpnFileName
-    echo "Where you store .ovpn file?"
-    read ovpnCaFilePath
-    export $ovpnCaFilePath
-    sudo docker run -v $ovpnDataPath:/etc/openvpn --log-driver=none --rm -it kylemanna/openvpn easyrsa \
-        build-client-full $ovpnFileName $iywpass
-    sudo docker run -v $ovpnDataPath:/etc/openvpn --log-driver=none --rm kylemanna/openvpn ovpn_getclient \
-        $ovpnFileName > ${ovpnCaFilePath}/${ovpnFileName}.ovpn
+    echo -e "\nWhat is your client name?"
+    read CLIENTNAME
+    export CLIENTNAME
+
+    docker-compose run --rm openvpn easyrsa build-client-full $CLIENTNAME
+    docker-compose run --rm openvpn ovpn_getclient $CLIENTNAME > /home/ubuntu/${CLIENTNAME}.ovpn
 }
 
 if [[ $(id -u) != 0 ]]; then
