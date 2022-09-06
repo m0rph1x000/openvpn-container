@@ -1,0 +1,45 @@
+---
+- name: Update Appstream in CentOS, step 1.
+  shell: "sed -i 's/mirrorlist/#mirrorlist/g' \
+    /etc/yum.repos.d/CentOS-*"
+
+- name: Update Appstream in CentOS, step 2.
+  shell: "sed -i \
+    's|#baseurl=http://mirror.centos.org|baseurl=http://vault.centos.org|g' \
+    /etc/yum.repos.d/CentOS-*"
+
+- name: Add docker repository.
+  yum_repository:
+    name: Docker-ce-stable
+    description: "docker-ce-stable repository"
+    baseurl: "{{ docker_base_url }}"
+    gpgcheck: true
+    gpgkey: "{{ docker_gpgkey_url }}"
+  notify: update cache
+
+- name: Install Docker engine.
+  yum:
+    name:
+      - docker-ce
+      - docker-ce-cli
+      - containerd.io
+      - docker-compose-plugin
+      - python3
+      - python3-pip
+
+- name: Ensure Docker is running and enbled at the boot
+  service:
+    name: docker
+    state: started
+    enabled: true
+
+#- name: Add Docker group to the user.
+#  user:
+#    name: vagrant
+#    append: true
+#    group: docker
+
+- name: Install docker-py to integration between Ansible and Docker
+  pip:
+    name: docker-py
+    state: absent

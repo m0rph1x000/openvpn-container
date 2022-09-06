@@ -1,0 +1,12 @@
+version: "2"
+services:
+  nordvpn:
+    cap_add:
+      - NET_ADMIN
+    image: kylemanna/openvpn
+    container_name: openvpn-server
+    ports:
+      - "1194:1194/udp"
+    restart: always
+    volumes:
+      - /opt/openvpn.conf.d

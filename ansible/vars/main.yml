@@ -1,0 +1,3 @@
+---
+docker_compose_path: "/opt/openvpn.conf.d"
+openvpn_config_path: "/opt/openvpn.conf.d"

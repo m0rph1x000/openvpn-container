@@ -1,0 +1,8 @@
+---
+- name: update cache
+  yum: update_cache=true
+  when: ansible_os_family == 'RedHat'
+
+- name: update cache
+  apt: update_cache=true
+  when: ansible_os_family == 'Debian'

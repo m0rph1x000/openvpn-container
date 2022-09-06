@@ -1,0 +1,8 @@
+---
+- include_vars: "{{ ansible_os_family }}.yml"
+- include_vars: "main.yml"
+
+- include: "install/{{ ansible_os_family }}.yml"
+
+- name: Deploy OpenVPN on based on container via docker-compose.
+  include: "deploy/deploy.yml"
