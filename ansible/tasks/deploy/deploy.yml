@@ -1,10 +1,7 @@
 ---
-- debug:
-    msg: "{{ docker_compose_path }}"
-
 - name: Create config directory.
   file:
-    path: "{{ docker_compose_path }}"
+    path: "{{ docker_config_path }}"
     state: directory
     mode: "0755"
 
@@ -14,12 +11,7 @@
     dest: "{{ docker_compose_path }}"
     mode: "0755"
 
-- name: Install docker-compose
-  pip:
-    name: docker-compose
-    state: absent
-
-- name: Install docker
+- name: Install docker Python package.
   pip:
     name: docker
     state: present

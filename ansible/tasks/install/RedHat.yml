@@ -32,14 +32,9 @@
     name: docker
     state: started
     enabled: true
-
 #- name: Add Docker group to the user.
 #  user:
 #    name: vagrant
 #    append: true
 #    group: docker
 
-- name: Install docker-py to integration between Ansible and Docker
-  pip:
-    name: docker-py
-    state: absent
